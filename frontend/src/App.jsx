@@ -5,6 +5,7 @@ import MergePage from './pages/MergePage.jsx'
 import RulesPage from './pages/RulesPage.jsx'
 import QualityPage from './pages/QualityPage.jsx'
 import SpeakersPage from './pages/SpeakersPage.jsx'
+import TypoCorrectionsPage from './pages/TypoCorrectionsPage.jsx'
 import ExcerptsPage from './pages/ExcerptsPage.jsx'
 import PublicTranscriptPage from './pages/PublicTranscriptPage.jsx'
 import CoveragePage from './pages/CoveragePage.jsx'
@@ -28,6 +29,7 @@ export default function App() {
           <Route path="/projects/:id/rules" element={<RulesPage />} />
           <Route path="/projects/:id/quality" element={<QualityPage />} />
           <Route path="/projects/:id/speakers" element={<SpeakersPage />} />
+          <Route path="/projects/:id/typos" element={<TypoCorrectionsPage />} />
           <Route path="/projects/:id/excerpts" element={<ExcerptsPage />} />
           <Route path="/projects/:id/public" element={<PublicTranscriptPage />} />
           <Route path="/projects/:id/coverage" element={<CoveragePage />} />

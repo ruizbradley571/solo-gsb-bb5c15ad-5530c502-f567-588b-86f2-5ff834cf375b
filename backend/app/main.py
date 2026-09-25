@@ -19,6 +19,7 @@ from . import (
     redact,
     rules,
     speakers,
+    typos,
 )
 from .merge import merge_documents
 from .schemas import (
@@ -34,6 +35,8 @@ from .schemas import (
     RuleIn,
     RulePreviewRequest,
     SpeakerRenameRequest,
+    TypoCorrectionCommitRequest,
+    TypoCorrectionPreviewRequest,
 )
 
 app = FastAPI(title="访谈音频校注", version="1.0.0")
@@ -257,6 +260,68 @@ def speaker_rename(project_id: str, payload: SpeakerRenameRequest) -> dict:
             for old, info in sorted(resolved_map.items())
         ],
     }
+
+
+# ---------- transcript typo batch correction (转写错词批量校正) ----------
+
+def _typo_pairs(payload: TypoCorrectionPreviewRequest) -> list[dict]:
+    return [{"from": p.from_, "to": p.to} for p in payload.pairs]
+
+
+@app.post("/api/projects/{project_id}/typo-corrections/preview")
+def typo_correction_preview(project_id: str,
+                            payload: TypoCorrectionPreviewRequest) -> dict:
+    """Preview wrong-word hits and corrected text on the saved transcript.
+
+    Empty / duplicate wrong words return 400 before any read of the result;
+    the response carries a transcript ``version`` fingerprint that the commit
+    endpoint verifies.
+    """
+    project = _get_or_404(project_id)
+    pairs = _typo_pairs(payload)
+    try:
+        typos.normalize_pairs(pairs)
+        result = typos.plan_correction(
+            project["document"], pairs, payload.caseSensitive)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    result["projectId"] = project_id
+    result["projectName"] = project["name"]
+    result["version"] = typos.transcript_version(project["document"])
+    return result
+
+
+@app.post("/api/projects/{project_id}/typo-corrections")
+def typo_correction_commit(project_id: str,
+                           payload: TypoCorrectionCommitRequest) -> dict:
+    """Commit the corrections previewed against ``version``.
+
+    Rejects the commit with 409 when the saved transcript was edited or
+    re-imported after the preview: the client must re-preview. On success the
+    changed segment texts are saved in one transaction while segment ids,
+    times, speakers and every annotation stay untouched.
+    """
+    _get_or_404(project_id)
+    pairs = _typo_pairs(payload)
+    try:
+        normalized = typos.normalize_pairs(pairs)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    if not normalized:
+        raise HTTPException(status_code=400,
+                            detail="请至少填写一组有效的错词校正")
+    try:
+        result = db.apply_typo_corrections(
+            project_id, normalized, payload.caseSensitive, payload.version)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except db.StaleTranscriptError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+    if result is None:  # project vanished between the checks
+        raise HTTPException(status_code=404, detail="项目不存在")
+    result["projectId"] = project_id
+    result["projectName"] = result["project"]["name"]
+    return result
 
 
 # ---------- excerpt package (摘录包) ----------

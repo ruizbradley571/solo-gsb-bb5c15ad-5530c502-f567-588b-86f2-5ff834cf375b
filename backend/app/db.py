@@ -219,6 +219,64 @@ def rename_speakers(project_id: str, resolved: dict) -> dict | None:
     return {"project": get_project(project_id), "counts": counts}
 
 
+class StaleTranscriptError(Exception):
+    """Raised when a batch-correction preview's transcript has changed.
+
+    The saved transcript (segments) was edited or re-imported between the
+    preview and the commit; the caller must re-preview before committing.
+    """
+
+
+def apply_typo_corrections(project_id: str, pairs: list[dict],
+                           case_sensitive: bool, version: str) -> dict | None:
+    """Apply wrong-word corrections to segment texts, atomically.
+
+    Re-reads the saved document inside one transaction and rejects the commit
+    (raising :class:`StaleTranscriptError`) unless its transcript fingerprint
+    still matches the preview's ``version``. Only the ``text`` field of hit
+    segments is rewritten: segment ids, start/end, speaker and every
+    annotation (all fields) are preserved. A failure rolls the whole update
+    back and leaves no partial modification.
+    """
+    from . import typos
+
+    with _lock:
+        project_row = _conn.execute(
+            "SELECT document FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+        if project_row is None:
+            return None
+        doc = json.loads(project_row["document"])
+        if typos.transcript_version(doc) != version:
+            raise StaleTranscriptError(
+                "预览对应的转写已被修改或重新导入，请重新预览后再确认")
+
+        plan = typos.plan_correction(doc, pairs, case_sensitive)
+        affected = {s["index"]: s["correctedText"] for s in plan["segments"]}
+        now = _now()
+        try:
+            _conn.execute("BEGIN")
+            for index, seg in enumerate(doc.get("segments", []) or []):
+                if index in affected and isinstance(seg, dict):
+                    seg["text"] = affected[index]
+            _conn.execute(
+                "UPDATE projects SET document = ?, updated_at = ? WHERE id = ?",
+                (json.dumps(doc, ensure_ascii=False), now, project_id),
+            )
+            _conn.commit()
+        except Exception:
+            _conn.rollback()
+            raise
+    return {
+        "project": get_project(project_id),
+        "counts": {
+            "segments": plan["summary"]["segments"],
+            "hits": plan["summary"]["hits"],
+            "pairs": plan["summary"]["hitPairs"],
+        },
+    }
+
+
 # ---------- annotation rules ----------
 
 def _rule_to_dict(row: sqlite3.Row) -> dict:

@@ -721,6 +721,55 @@ code {
   padding-top: 6px;
 }
 
+/* ---------- transcript typo batch correction (错词批量校正) ---------- */
+
+.tc-panel-hint { font-weight: 400; margin-left: 10px; }
+
+.tc-pair-list { display: flex; flex-direction: column; gap: 8px; }
+.tc-pair-row { display: flex; align-items: center; gap: 10px; }
+.tc-pair-row input { flex: 1; min-width: 0; }
+.tc-arrow { color: var(--muted); margin: 0 2px; }
+.tc-pair-actions {
+  display: flex; align-items: center; gap: 16px; margin-top: 10px;
+}
+.tc-case { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+
+.tc-preview .stats-grid { margin-bottom: 12px; }
+.tc-pair-table { margin-bottom: 14px; }
+.tc-pair-table td { font-variant-numeric: tabular-nums; }
+
+.tc-segment-list {
+  display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px;
+}
+.tc-segment {
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 12px; background: #fbfcfe;
+}
+.tc-segment-head {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 6px;
+}
+.tc-seg-id {
+  font-family: ui-monospace, Menlo, monospace; font-size: 12px;
+  color: var(--primary-dark);
+}
+.tc-text { line-height: 1.9; word-break: break-word; }
+.tc-text-label {
+  display: inline-block; min-width: 44px; font-size: 12px;
+  color: var(--muted); margin-right: 6px;
+}
+.tc-hit {
+  background: #ffe9d6; color: #9a4a12; border-radius: 3px;
+  padding: 0 2px;
+}
+.tc-fix {
+  background: #dcf3e3; color: #1d6b36; border-radius: 3px;
+  padding: 0 2px; font-weight: 600;
+}
+.tc-confirm-row {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding-top: 6px;
+}
+
 /* ---------- excerpt package (摘录包) ---------- */
 .exc-range-table input { width: 100%; }
 .exc-time { font-variant-numeric: tabular-nums; }

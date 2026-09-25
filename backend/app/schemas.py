@@ -116,6 +116,26 @@ class ExcerptRequest(BaseModel):
     ranges: list[TimeRangeIn] = Field(min_length=1)
 
 
+# ---------- transcript typo batch correction (转写错词批量校正) ----------
+
+class TypoPairIn(BaseModel):
+    """One wrong-word -> correct-word correction."""
+    model_config = ConfigDict(populate_by_name=True)
+    from_: str = Field(default="", alias="from")
+    to: str = Field(default="")
+
+
+class TypoCorrectionPreviewRequest(BaseModel):
+    """Correction pairs previewed against the project's saved transcript."""
+    pairs: list[TypoPairIn] = []
+    caseSensitive: bool = False
+
+
+class TypoCorrectionCommitRequest(TypoCorrectionPreviewRequest):
+    """Commit additionally carries the preview's transcript fingerprint."""
+    version: str
+
+
 # ---------- public transcript (公开版转写) ----------
 
 class PublicTranscriptRequest(BaseModel):

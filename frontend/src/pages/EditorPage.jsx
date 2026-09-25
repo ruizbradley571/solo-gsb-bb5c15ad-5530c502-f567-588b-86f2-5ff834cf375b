@@ -55,6 +55,21 @@ export default function EditorPage() {
     return () => clearTimeout(timer)
   }, [location.state])
 
+  // Returning from the typo batch-correction workbench: it rewrote the hit
+  // segment texts in one transaction; the reload above already shows them.
+  useEffect(() => {
+    const info = location.state?.typoCorrection
+    if (!info) return undefined
+    setMessage(
+      `错词批量校正已保存：改写 ${info.segments} 个片段中的 ` +
+      `${info.hits} 处命中（${info.pairs} 个错词）；片段 ID、时间、说话人` +
+      '与全部校注均保持不变，可在下方片段列表查看校正后文本。')
+    const timer = setTimeout(() => setMessage(''), 6000)
+    window.history.replaceState(
+      { ...window.history.state, usr: null }, '')
+    return () => clearTimeout(timer)
+  }, [location.state])
+
   // Deep link from the quality-check / coverage workbenches:
   // ?focusStart=…&focusEnd=…[&ann=…][&focusSource=coverage]
   useEffect(() => {
@@ -272,6 +287,9 @@ export default function EditorPage() {
           </Link>
           <Link className="btn" to={`/projects/${id}/speakers`}>
             🏷️ 说话人归一
+          </Link>
+          <Link className="btn" to={`/projects/${id}/typos`}>
+            ✍️ 错词批量校正
           </Link>
           <Link className="btn" to={`/projects/${id}/rules`}>
             ⚙️ 规则批量标注

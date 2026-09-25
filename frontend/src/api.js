@@ -11,7 +11,9 @@ async function request(path, options = {}) {
   const text = await res.text();
   const data = text ? JSON.parse(text) : null;
   if (!res.ok) {
-    throw new Error((data && data.detail) || `请求失败 (${res.status})`);
+    const err = new Error((data && data.detail) || `请求失败 (${res.status})`)
+    err.status = res.status
+    throw err
   }
   return data;
 }
@@ -102,6 +104,18 @@ export const api = {
     request(`/projects/${projectId}/speaker-rename`, {
       method: 'POST',
       body: JSON.stringify({ mappings }),
+    }),
+
+  // ----- transcript typo batch correction (转写错词批量校正) -----
+  previewTypoCorrections: (projectId, pairs, caseSensitive = false) =>
+    request(`/projects/${projectId}/typo-corrections/preview`, {
+      method: 'POST',
+      body: JSON.stringify({ pairs, caseSensitive }),
+    }),
+  commitTypoCorrections: (projectId, { pairs, caseSensitive, version }) =>
+    request(`/projects/${projectId}/typo-corrections`, {
+      method: 'POST',
+      body: JSON.stringify({ pairs, caseSensitive, version }),
     }),
 
   // ----- excerpt package (摘录包) -----
