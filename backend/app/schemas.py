@@ -116,6 +116,26 @@ class ExcerptRequest(BaseModel):
     ranges: list[TimeRangeIn] = Field(min_length=1)
 
 
+# ---------- transcript error-word batch correction (转写错词批量校正) ----------
+
+class CorrectionPairIn(BaseModel):
+    """One wrong-word -> right-word correction pair."""
+    model_config = ConfigDict(populate_by_name=True)
+    from_name: str = Field(default="", alias="from")
+    to_name: str = Field(default="", alias="to")
+
+
+class CorrectionPreviewRequest(BaseModel):
+    """Word list for the correction preview (read-only, saved transcript)."""
+    pairs: list[CorrectionPairIn] = []
+
+
+class CorrectionApplyRequest(BaseModel):
+    """Confirm a preview: same word list plus the previewed transcript version."""
+    pairs: list[CorrectionPairIn] = []
+    transcriptVersion: str = ""
+
+
 # ---------- public transcript (公开版转写) ----------
 
 class PublicTranscriptRequest(BaseModel):

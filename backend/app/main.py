@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import (
+    corrections,
     coverage,
     db,
     excerpts,
@@ -22,6 +23,8 @@ from . import (
 )
 from .merge import merge_documents
 from .schemas import (
+    CorrectionApplyRequest,
+    CorrectionPreviewRequest,
     DocumentIn,
     ExcerptRequest,
     MergeRequest,
@@ -340,6 +343,59 @@ def public_transcript_download(project_id: str, payload: PublicTranscriptRequest
                 f"filename*=UTF-8''{fname}"
         },
     )
+
+
+# ---------- transcript error-word batch correction (转写错词批量校正) ----------
+
+def _correction_pairs(payload) -> list[dict]:
+    return [{"from": p.from_name, "to": p.to_name} for p in payload.pairs]
+
+
+@app.post("/api/projects/{project_id}/corrections/preview")
+def corrections_preview(project_id: str,
+                        payload: CorrectionPreviewRequest) -> dict:
+    """Preview wrong-word corrections against the *saved* transcript.
+
+    Read-only: lists every hit segment with its hits and corrected text,
+    plus the transcript version the confirm step must present.
+    """
+    project = _get_or_404(project_id)
+    try:
+        result = corrections.preview_corrections(
+            project["document"], _correction_pairs(payload))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    result["projectId"] = project_id
+    result["projectName"] = project["name"]
+    return result
+
+
+@app.post("/api/projects/{project_id}/corrections/apply")
+def corrections_apply(project_id: str, payload: CorrectionApplyRequest) -> dict:
+    """Confirm a correction preview and save the changed segment texts.
+
+    The word list is validated again and the preview's transcript version
+    is re-verified inside the write transaction; when the saved transcript
+    was edited or re-imported in the meantime the write is rejected (409)
+    and a fresh preview is required.  Segment ids, times, speakers and all
+    annotations are preserved.
+    """
+    _get_or_404(project_id)
+    try:
+        pairs = corrections.normalize_pairs(_correction_pairs(payload))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    if not payload.transcriptVersion:
+        raise HTTPException(status_code=400,
+                            detail="缺少预览版本，请先生成预览")
+    result = db.apply_corrections(project_id, pairs, payload.transcriptVersion)
+    if result is None:  # project vanished between the checks
+        raise HTTPException(status_code=404, detail="项目不存在")
+    if result.get("conflict"):
+        raise HTTPException(
+            status_code=409,
+            detail="已保存的转写在此期间被编辑或重新导入，请重新生成预览后再确认")
+    return result
 
 
 # ---------- rule-based batch annotation ----------

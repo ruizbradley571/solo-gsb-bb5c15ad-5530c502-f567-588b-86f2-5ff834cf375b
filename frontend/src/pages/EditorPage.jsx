@@ -55,6 +55,20 @@ export default function EditorPage() {
     return () => clearTimeout(timer)
   }, [location.state])
 
+  // Returning from the error-word correction workbench: the corrected
+  // segment texts were saved there; this page's reload shows them.
+  useEffect(() => {
+    const info = location.state?.correctionApply
+    if (!info) return undefined
+    setMessage(
+      `错词校正已保存：影响 ${info.segments} 个片段、共 ` +
+      `${info.replacements} 处替换；片段 ID、时间与校注均未变化。`)
+    const timer = setTimeout(() => setMessage(''), 6000)
+    window.history.replaceState(
+      { ...window.history.state, usr: null }, '')
+    return () => clearTimeout(timer)
+  }, [location.state])
+
   // Deep link from the quality-check / coverage workbenches:
   // ?focusStart=…&focusEnd=…[&ann=…][&focusSource=coverage]
   useEffect(() => {
@@ -281,6 +295,9 @@ export default function EditorPage() {
           </Link>
           <Link className="btn" to={`/projects/${id}/public`}>
             🛡️ 公开版转写
+          </Link>
+          <Link className="btn" to={`/projects/${id}/corrections`}>
+            📝 错词校正
           </Link>
           <button className="btn" onClick={() => importRef.current?.click()}>
             导入转写

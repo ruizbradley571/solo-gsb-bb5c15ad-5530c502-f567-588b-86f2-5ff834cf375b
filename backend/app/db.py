@@ -8,6 +8,7 @@ import threading
 import uuid
 from datetime import datetime, timezone
 
+from . import corrections
 from . import rules as rule_engine
 
 _DATA_DIR = os.environ.get("DATA_DIR", "/data")
@@ -536,6 +537,56 @@ def undo_rule_run(run_id: str) -> dict | None:
 
 def deepcopy_json(value):
     return json.loads(json.dumps(value, ensure_ascii=False))
+
+
+def apply_corrections(project_id: str, pairs: list[dict],
+                      expected_version: str) -> dict | None:
+    """Atomically rewrite corrected segment texts in the saved document.
+
+    The transcript version is re-verified inside the write lock: when the
+    saved transcript was edited or re-imported after the preview, nothing
+    is written and ``{"conflict": True}`` is returned (the caller asks for
+    a fresh preview).  Only the ``text`` field of hit segments changes —
+    segment ids, times, speakers and every annotation are preserved, and
+    the single document update commits or rolls back as a whole.
+    ``pairs`` must already be normalized by the corrections engine.
+    Returns ``None`` when the project does not exist.
+    """
+    with _lock:
+        row = _conn.execute(
+            "SELECT document FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+        if row is None:
+            return None
+        doc = json.loads(row["document"])
+        segments = doc.get("segments", []) or []
+        if corrections.transcript_version(segments) != expected_version:
+            return {"conflict": True}
+        new_texts, replacements = corrections.corrected_texts(segments, pairs)
+        changed_ids: list = []
+        for index, new_text in new_texts.items():
+            seg = segments[index]
+            if isinstance(seg, dict) and seg.get("text") != new_text:
+                seg["text"] = new_text
+                changed_ids.append(seg.get("id"))
+        if changed_ids:
+            now = _now()
+            try:
+                _conn.execute("BEGIN")
+                _conn.execute(
+                    "UPDATE projects SET document = ?, updated_at = ?"
+                    " WHERE id = ?",
+                    (json.dumps(doc, ensure_ascii=False), now, project_id),
+                )
+                _conn.commit()
+            except Exception:
+                _conn.rollback()
+                raise
+    return {
+        "project": get_project(project_id),
+        "counts": {"segments": len(changed_ids), "replacements": replacements},
+        "changedSegmentIds": changed_ids,
+    }
 
 
 # ---------- quality-check scan history ----------

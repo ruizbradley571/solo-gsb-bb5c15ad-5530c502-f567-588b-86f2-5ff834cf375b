@@ -819,3 +819,21 @@ code {
 .qc-focus-hint.coverage-focus-hint {
   background: #fdf5ea; border-color: #ecd9b4; color: #7a5310;
 }
+
+/* ---------- transcript error-word batch correction (转写错词批量校正) ---------- */
+.cr-pairs .sp-map-list { max-width: 720px; }
+.cr-summary .stats-grid { margin-bottom: 12px; }
+.cr-result {
+  display: flex; gap: 12px; align-items: center;
+  justify-content: space-between; flex-wrap: wrap;
+}
+.cr-result-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.cr-new mark { background: #b7e4c7; }
+.cr-new::before {
+  content: "校正后"; display: inline-block; margin-right: 8px;
+  font-size: 11px; color: var(--ok); font-weight: 600;
+}
+.cr-segments .hit-text:first-of-type::before {
+  content: "原文"; display: inline-block; margin-right: 8px;
+  font-size: 11px; color: var(--muted); font-weight: 600;
+}

@@ -122,6 +122,18 @@ export const api = {
   publicTranscriptDownloadUrl: (projectId) =>
     `${BASE}/projects/${projectId}/public-transcript/download`,
 
+  // ----- transcript error-word batch correction (转写错词批量校正) -----
+  previewCorrections: (projectId, payload) =>
+    request(`/projects/${projectId}/corrections/preview`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  applyCorrections: (projectId, payload) =>
+    request(`/projects/${projectId}/corrections/apply`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
   // ----- annotation coverage gaps (校注覆盖盲区) -----
   coverageGaps: (projectId, speaker = null) => {
     const qs = speaker

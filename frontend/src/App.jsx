@@ -7,6 +7,7 @@ import QualityPage from './pages/QualityPage.jsx'
 import SpeakersPage from './pages/SpeakersPage.jsx'
 import ExcerptsPage from './pages/ExcerptsPage.jsx'
 import PublicTranscriptPage from './pages/PublicTranscriptPage.jsx'
+import CorrectionsPage from './pages/CorrectionsPage.jsx'
 import CoveragePage from './pages/CoveragePage.jsx'
 
 export default function App() {
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="/projects/:id/speakers" element={<SpeakersPage />} />
           <Route path="/projects/:id/excerpts" element={<ExcerptsPage />} />
           <Route path="/projects/:id/public" element={<PublicTranscriptPage />} />
+          <Route path="/projects/:id/corrections" element={<CorrectionsPage />} />
           <Route path="/projects/:id/coverage" element={<CoveragePage />} />
           <Route path="/merge" element={<MergePage />} />
         </Routes>
